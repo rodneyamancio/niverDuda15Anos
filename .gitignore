@@ -44,3 +44,4 @@ src/generated/
 # projeto
 !.env.example
 _to_delete/
+!.env.production.example
