@@ -1,0 +1,121 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum SaveTheDateStatus {
+  PENDING // ainda não respondeu
+  YES     // pretende ir
+  NO      // não pretende ir
+}
+
+// Preparado para a feature futura de RSVP (confirmação final)
+enum RsvpStatus {
+  PENDING
+  CONFIRMED
+  DECLINED
+}
+
+enum Channel {
+  EMAIL
+  WHATSAPP
+}
+
+enum MessageKind {
+  SAVE_THE_DATE
+  RSVP
+}
+
+model Guest {
+  id              String            @id @default(cuid())
+  name            String
+  email           String?
+  phone           String? // celular com DDD, ex: 11999998888
+  token           String            @unique @default(cuid())
+  saveTheDate     SaveTheDateStatus @default(PENDING)
+  saveTheDateAt   DateTime?
+  rsvpStatus      RsvpStatus        @default(PENDING)
+  rsvpAt          DateTime?
+  notes           String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  messages        MessageLog[]
+
+  @@map("guests")
+}
+
+enum PhaseStatus {
+  PLANNED // ainda não começou
+  ACTIVE // fase atual
+  CLOSED // encerrada
+}
+
+model EventPhase {
+  id          String      @id @default(cuid())
+  name        String
+  description String?
+  endsAt      DateTime? // data prevista de encerramento
+  status      PhaseStatus @default(PLANNED)
+  order       Int         @default(0)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@map("event_phases")
+}
+
+model NotificationRecipient {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String // celular com DDD que recebe avisos no WhatsApp
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("notification_recipients")
+}
+
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actor     String // "admin" | "superadmin" | "guest:<nome>" | "unknown"
+  action    String // LOGIN_SUCCESS, GUEST_CREATED, INVITE_SENT, SETTINGS_UPDATED, ...
+  entity    String? // "guest" | "settings" | "session"
+  entityId  String?
+  summary   String // descrição legível em pt-BR
+  before    Json? // estado anterior (segredos mascarados)
+  after     Json? // estado novo (segredos mascarados)
+  metadata  Json? // informações extras (canal, resultado, etc.)
+  ip        String?
+  userAgent String?
+  method    String?
+  path      String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([action])
+  @@map("audit_logs")
+}
+
+model MessageLog {
+  id        String      @id @default(cuid())
+  guestId   String
+  guest     Guest       @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  channel   Channel
+  kind      MessageKind @default(SAVE_THE_DATE)
+  success   Boolean
+  error     String?
+  createdAt DateTime    @default(now())
+
+  @@map("message_logs")
+}

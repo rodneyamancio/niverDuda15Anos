@@ -1,0 +1,46 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: niver-duda-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: duda
+      POSTGRES_PASSWORD: duda15anos
+      POSTGRES_DB: niver_duda
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U duda -d niver_duda"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    image: node:22-alpine
+    container_name: niver-duda-app
+    working_dir: /app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # dentro do Docker o banco é acessado pelo hostname "db" (sobrepõe o .env)
+      DATABASE_URL: postgresql://duda:duda15anos@db:5432/niver_duda?schema=public
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    volumes:
+      - .:/app
+      # pastas geradas ficam em volumes do Docker (não tocam o disco do Mac,
+      # evitando problemas de permissão e deixando o dev server mais rápido)
+      - node_modules:/app/node_modules
+      - next_cache:/app/.next
+      - prisma_generated:/app/src/generated
+    command: sh -c "npm install && npx prisma migrate deploy && npm run dev -- -H 0.0.0.0"
+
+volumes:
+  pgdata:
+  node_modules:
+  next_cache:
+  prisma_generated:

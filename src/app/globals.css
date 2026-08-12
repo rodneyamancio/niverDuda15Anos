@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+@theme {
+  --color-royal-50: #faf7ff;
+  --color-royal-100: #f0e8fb;
+  --color-royal-200: #e2d2f6;
+  --color-royal-300: #c9a8ee;
+  --color-royal-400: #ab77e0;
+  --color-royal-500: #9d4edd;
+  --color-royal-600: #7b2fbf;
+  --color-royal-700: #5b2c8d;
+  --color-royal-800: #46226c;
+  --color-royal-900: #331a4e;
+  --font-display: Georgia, "Times New Roman", serif;
+}
+
+body {
+  background: var(--color-royal-50);
+  color: #3d2a52;
+}
