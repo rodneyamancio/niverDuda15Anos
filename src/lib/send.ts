@@ -3,6 +3,7 @@ import twilio from "twilio";
 import { prisma } from "@/lib/prisma";
 import { emailHtml, emailSubject, whatsappText } from "@/lib/messages";
 import { getSettings, type AppSettings } from "@/lib/settings";
+import { evolutionConfigured, evolutionSendText } from "@/lib/evolution";
 import type { Guest } from "@/generated/prisma/client";
 
 export type SendChannel = "email" | "whatsapp";
@@ -55,36 +56,51 @@ async function sendEmail(guest: Guest, s: AppSettings): Promise<SendResult> {
   }
 }
 
+/**
+ * Envia uma mensagem de texto no WhatsApp pelo provedor configurado
+ * (Evolution API self-hosted ou Twilio). `toE164` no formato +5511999998888.
+ */
+export async function sendWhatsAppText(
+  toE164: string,
+  text: string,
+  s: AppSettings
+): Promise<{ success: boolean; error?: string }> {
+  if (s.whatsappProvider === "twilio") {
+    if (!s.twilioAccountSid || !s.twilioAuthToken || !s.twilioWhatsappFrom) {
+      return { success: false, error: "Credenciais Twilio não configuradas (Configurações ou .env)" };
+    }
+    try {
+      const client = twilio(s.twilioAccountSid, s.twilioAuthToken);
+      await client.messages.create({
+        from: `whatsapp:${s.twilioWhatsappFrom}`,
+        to: `whatsapp:${toE164}`,
+        body: text,
+      });
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: e instanceof Error ? e.message : "Erro desconhecido" };
+    }
+  }
+
+  // Evolution API (padrão)
+  if (!evolutionConfigured(s)) {
+    return {
+      success: false,
+      error: "Evolution API não configurada (URL, API key e instância em Configurações)",
+    };
+  }
+  return evolutionSendText(s, toE164, text);
+}
+
 async function sendWhatsApp(guest: Guest, s: AppSettings): Promise<SendResult> {
   if (!guest.phone) {
     return { channel: "whatsapp", success: false, error: "Convidado sem celular cadastrado" };
   }
-  if (!s.twilioAccountSid || !s.twilioAuthToken || !s.twilioWhatsappFrom) {
-    return {
-      channel: "whatsapp",
-      success: false,
-      error: "Credenciais Twilio não configuradas (Configurações ou .env)",
-    };
-  }
   const to = normalizePhone(guest.phone, s.defaultCountryCode);
   if (!to) return { channel: "whatsapp", success: false, error: "Celular inválido" };
 
-  try {
-    const client = twilio(s.twilioAccountSid, s.twilioAuthToken);
-    await client.messages.create({
-      from: `whatsapp:${s.twilioWhatsappFrom}`,
-      to: `whatsapp:${to}`,
-      body: whatsappText(guest.name, guest.token, s),
-    });
-    return { channel: "whatsapp", success: true, to };
-  } catch (e) {
-    return {
-      channel: "whatsapp",
-      success: false,
-      error: e instanceof Error ? e.message : "Erro desconhecido",
-      to,
-    };
-  }
+  const result = await sendWhatsAppText(to, whatsappText(guest.name, guest.token, s), s);
+  return { channel: "whatsapp", success: result.success, error: result.error, to };
 }
 
 export async function sendInvite(guest: Guest, channels: SendChannel[]): Promise<SendResult[]> {

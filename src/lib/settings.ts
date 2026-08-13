@@ -14,6 +14,10 @@ export interface AppSettings {
   twilioAuthToken: string;
   twilioWhatsappFrom: string;
   defaultCountryCode: string;
+  whatsappProvider: string; // "evolution" | "twilio"
+  evolutionApiUrl: string;
+  evolutionApiKey: string;
+  evolutionInstance: string;
 }
 
 /** Valores padrão — vêm do .env; o que for salvo no banco (tela de config) tem prioridade. */
@@ -32,6 +36,10 @@ function defaults(): AppSettings {
     twilioAuthToken: process.env.TWILIO_AUTH_TOKEN ?? "",
     twilioWhatsappFrom: process.env.TWILIO_WHATSAPP_FROM ?? "",
     defaultCountryCode: process.env.DEFAULT_COUNTRY_CODE ?? "55",
+    whatsappProvider: process.env.WHATSAPP_PROVIDER ?? "evolution",
+    evolutionApiUrl: (process.env.EVOLUTION_API_URL ?? "http://evolution:8080").replace(/\/$/, ""),
+    evolutionApiKey: process.env.EVOLUTION_API_KEY ?? "",
+    evolutionInstance: process.env.EVOLUTION_INSTANCE ?? "festa-duda",
   };
 }
 
@@ -42,6 +50,7 @@ export const SECRET_KEYS: (keyof AppSettings)[] = [
   "resendApiKey",
   "twilioAccountSid",
   "twilioAuthToken",
+  "evolutionApiKey",
 ];
 
 export function maskSecret(value: string): string {

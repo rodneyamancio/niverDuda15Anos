@@ -40,8 +40,3 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 src/generated/
-
-# projeto
-!.env.example
-_to_delete/
-!.env.production.example

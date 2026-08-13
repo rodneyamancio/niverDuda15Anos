@@ -29,6 +29,10 @@ const settingsSchema = z.object({
   twilioAuthToken: z.string().trim().optional(),
   twilioWhatsappFrom: z.string().trim().optional(),
   defaultCountryCode: z.string().trim().regex(/^\d{1,3}$/, "DDI inválido").optional(),
+  whatsappProvider: z.enum(["evolution", "twilio"]).optional(),
+  evolutionApiUrl: z.string().trim().optional(),
+  evolutionApiKey: z.string().trim().optional(),
+  evolutionInstance: z.string().trim().optional(),
 });
 
 function withMaskedSecrets(s: AppSettings): Record<string, string> {
